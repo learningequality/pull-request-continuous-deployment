@@ -63,7 +63,7 @@ def check_pull_request_status(request):
         return "Do not trigger any functions."
 
     collaborators = get_collaborators()
-    if request.json["pull_request"]["user"]["login"] not in collaborators:
+    if request.json["sender"]["login"] not in collaborators:
         return "The user is not authorized to trigger the function."
 
     demo_label = os.environ["LABEL_NAME"]
