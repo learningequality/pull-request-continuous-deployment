@@ -1,0 +1,27 @@
+steps:
+- name: 'gcr.io/$PROJECT_ID/slackbot'
+  entrypoint: 'sh'
+  secretEnv: ['SLACK_WEBHOOK']
+  args: ['-c', '--build $BUILD_ID --webhook $$SLACK_WEBHOOK']
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: check-app-image-existence
+  args: ['container', 'images', 'describe', 'gcr.io/$PROJECT_ID/learningequality-studio-app:$COMMIT_SHA']
+
+- name: 'gcr.io/$PROJECT_ID/helm'
+  id: helm-delete-studio-instance
+  waitFor: ['check-app-image-existence']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-f'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=dev-qa-cluster'
+  args: ['delete', '--purge', '$_RELEASE_NAME']
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: delete-database
+  waitFor: ['helm-delete-studio-instance']
+  args: ['sql', 'databases', 'delete', '$_RELEASE_NAME', '--instance=$_DATABASE_INSTANCE_NAME']
+
+secrets:
+- kmsKeyName: projects/ops-central/locations/global/keyRings/builder-secrets/cryptoKeys/slackwebhook
+  secretEnv:
+    SLACK_WEBHOOK: CiQA5jOsoLBwf5l2KyXQmnLwu2MHkj5xZz/GupkkBbUBpuOoBq4SdwDllQBYbzEJS9X6uNpdD2jSRln5n76Y5HhEUuaJUU9eqePdv9pnorBu9fd+z1zsolLXezMBbM7JwXxq3LuvhSF3no4iJMng2QoFBbSeS+LlHMd2jY2YrloQTN1f3lZ0CRPSDGVnIlo3a1dHExJqcG6b0sy8s4X4
