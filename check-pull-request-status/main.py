@@ -12,19 +12,10 @@ MSG_TURN_DOWN_SERVER = b"Turn down"
 MSG_SET_UP_SERVER = b"Set up"
 
 
-def publish_message_to_turn_down_server(info):
+def publish_message_to_pubsub(publisher, topic, message, info):
     publisher.publish(
-        TOPIC_TURN_DOWN_SERVER,
-        MSG_TURN_DOWN_SERVER,
-        user=info["user"]["login"],
-        branch=info["ref"],
-        commit_sha=info["sha"],
-    )
-
-def publish_message_to_set_up_server(info):
-    publisher.publish(
-        TOPIC_SET_UP_SERVER,
-        MSG_SET_UP_SERVER,
+        topic,
+        message,
         user=info["user"]["login"],
         repo=info["repo"]["name"],
         branch=info["ref"],
@@ -80,31 +71,31 @@ def check_pull_request_status(request):
     # Start from here, the label for demo server must exist, be added or be removed in the pull request.
     # the latter two come with the label or unlabel action
     action = request.json["action"]
-
+    info = request.json["pull_request"]["head"]
     publisher = pubsub_v1.PublisherClient()
 
     # Turn down #1
     if action == "closed":
         print("The pull request is closed. Turning down the demo server...")
-        publish_message_to_set_up_server(publisher, request.json["pull_request"]["head"])
+        publish_message_to_pubsub(publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info)
         return "Turning down the demo server..."
 
     elif action == "unlabeled" and changed_label["name"] == demo_label:
         print(
             "Removing the label {} from the pull request. Turning down the demo server...".format(demo_label)
         )
-        publish_message_to_set_up_server(publisher, request.json["pull_request"]["head"])
+        publish_message_to_pubsub(publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info)
         return "Turning down the demo server..."
 
     # Deploy #1
     elif action in ["reopened", "synchronize"]:
         print("The pull request is {}. Setting up the demo server...".format(action))
-        publish_message_to_set_up_server(publisher, request.json["pull_request"]["head"])
+        publish_message_to_pubsub(publisher, TOPIC_SET_UP_SERVER, MSG_SET_UP_SERVER, info)
         return "Setting up the demo server..."
 
     elif action == "labeled" and changed_label["name"] == demo_label:
         print("Labeling the pull request with {}. Setting up the demo server...".format(demo_label))
-        publish_message_to_set_up_server(publisher, request.json["pull_request"]["head"])
+        publish_message_to_pubsub(publisher, TOPIC_SET_UP_SERVER, MSG_SET_UP_SERVER, info)
         return "Setting up the demo server..."
 
     else:

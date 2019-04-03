@@ -2,7 +2,7 @@ steps:
 - name: 'gcr.io/$PROJECT_ID/slackbot'
   entrypoint: 'sh'
   secretEnv: ['SLACK_WEBHOOK']
-  args: ['-c', '--build $BUILD_ID --webhook $$SLACK_WEBHOOK']
+  args: ['-c', '/go/bin/main --build $BUILD_ID --webhook $$SLACK_WEBHOOK']
 
 - name: 'gcr.io/cloud-builders/gcloud'
   id: check-app-image-existence

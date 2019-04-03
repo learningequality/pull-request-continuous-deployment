@@ -5,18 +5,6 @@ from github import Github
 from google.cloud import storage
 
 
-# Constants
-STATUS_MAP = {
-    "QUEUED": ["pending", "Build is queued"],
-    "WORKING": ["pending", "Build is being executed"],
-    "FAILURE": ["error", "Build failed"],
-    "INTERNAL_ERROR": ["failure", "Internal builder error"],
-    "CANCELLED": ["failure", "Build cancelled by user"],
-    "TIMEOUT": ["failure", "Build timed out"],
-    "SUCCESS": ["success", ""],
-}
-
-
 def cloud_build_github_check(event, context):
     build = ast.literal_eval(base64.b64decode(event["data"]).decode("utf-8"))
     try:
@@ -37,10 +25,19 @@ def cloud_build_github_check(event, context):
     g = Github(github_access_token)
     repo = g.get_repo(os.environ["GITHUB_REPO"])
     commit_sha = build["substitutions"]["COMMIT_SHA"]
-    success_description = "Build finished successfully. Check {}.studio.cd.learningequality.org".format(
+    success_description = "Success: {}.studio.cd.learningequality.org".format(
         build["substitutions"]["_RELEASE_NAME"]
     )
-    status_map["SUCCESS"][1] = success_description
+
+    status_map = {
+        "QUEUED": ["pending", "Build is queued"],
+        "WORKING": ["pending", "Build is being executed"],
+        "FAILURE": ["error", "Build failed"],
+        "INTERNAL_ERROR": ["failure", "Internal builder error"],
+        "CANCELLED": ["failure", "Build cancelled by user"],
+        "TIMEOUT": ["failure", "Build timed out"],
+        "SUCCESS": ["success", success_description],
+    }
 
     state, description = status_map[build["status"]]
 
@@ -48,5 +45,5 @@ def cloud_build_github_check(event, context):
         state=state,
         target_url=build["logUrl"],
         description=description,
-        context="Pull Request Demo",
+        context="Demo",
     )
