@@ -7,6 +7,7 @@ from googleapiclient import discovery
 # Constants
 MSG_TURN_DOWN_SERVER = "Turn down"
 
+
 def turn_down_pull_request_demo(event, context):
     pubsub_message = base64.b64decode(event["data"]).decode("utf-8")
     if pubsub_message != MSG_TURN_DOWN_SERVER:
@@ -26,7 +27,7 @@ def turn_down_pull_request_demo(event, context):
         "substitutions": {
             "COMMIT_SHA": commit_sha,
             "_RELEASE_NAME": release_name,
-            "_DATABASE_INSTANCE_NAME": os.environ["DATABASE_INSTANCE_NAME"]
+            "_DATABASE_INSTANCE_NAME": os.environ["DATABASE_INSTANCE_NAME"],
         }
     }
     build_body.update(cloudbuild_yaml)

@@ -110,7 +110,9 @@ def build_studio_pull_request_image(event, context):
             "_DATABASE_INSTANCE_NAME": os.environ["DATABASE_INSTANCE_NAME"],
             "_POSTGRES_USERNAME": os.environ["POSTGRES_USERNAME"],
             "_POSTGRES_PASSWORD": os.environ["POSTGRES_PASSWORD"],
-            "_TARBALL_LOCATION": "gs://{}/{}".format(bucket_name, destination_blob_name)
+            "_TARBALL_LOCATION": "gs://{}/{}".format(
+                bucket_name, destination_blob_name
+            ),
         },
     }
     build_body.update(cloudbuild_yaml)

@@ -42,8 +42,5 @@ def cloud_build_github_check(event, context):
     state, description = status_map[build["status"]]
 
     repo.get_commit(sha=commit_sha).create_status(
-        state=state,
-        target_url=build["logUrl"],
-        description=description,
-        context="Demo",
+        state=state, target_url=build["logUrl"], description=description, context="Demo"
     )

@@ -6,8 +6,12 @@ from google.cloud import pubsub_v1
 from google.cloud import storage
 
 # Constants
-TOPIC_TURN_DOWN_SERVER = "projects/{project_id}/topics/{topic}".format(project_id=os.environ["GCP_PROJECT"], topic="turn-down-demo-server")
-TOPIC_SET_UP_SERVER = "projects/{project_id}/topics/{topic}".format(project_id=os.environ["GCP_PROJECT"], topic="set-up-demo-server")
+TOPIC_TURN_DOWN_SERVER = "projects/{project_id}/topics/{topic}".format(
+    project_id=os.environ["GCP_PROJECT"], topic="turn-down-demo-server"
+)
+TOPIC_SET_UP_SERVER = "projects/{project_id}/topics/{topic}".format(
+    project_id=os.environ["GCP_PROJECT"], topic="set-up-demo-server"
+)
 MSG_TURN_DOWN_SERVER = b"Turn down"
 MSG_SET_UP_SERVER = b"Set up"
 
@@ -21,6 +25,7 @@ def publish_message_to_pubsub(publisher, topic, message, info):
         branch=info["ref"],
         commit_sha=info["sha"],
     )
+
 
 def get_collaborators():
     github_access_token = (
@@ -40,6 +45,7 @@ def get_collaborators():
         collaborators.append(user.login)
 
     return collaborators
+
 
 def check_pull_request_status(request):
     if not request.json.get("pull_request"):
@@ -61,10 +67,13 @@ def check_pull_request_status(request):
     current_labels = request.json["pull_request"]["labels"]
     changed_label = request.json.get("label")
     if (
-        not current_labels or demo_label not in [label["name"] for label in current_labels]
+        not current_labels
+        or demo_label not in [label["name"] for label in current_labels]
     ) and (not changed_label or changed_label["name"] != demo_label):
         print(
-            "Label {} is not attached to the pull request. Do not trigger any functions.".format(demo_label)
+            "Label {} is not attached to the pull request. Do not trigger any functions.".format(
+                demo_label
+            )
         )
         return "Do not trigger any functions."
 
@@ -77,25 +86,39 @@ def check_pull_request_status(request):
     # Turn down #1
     if action == "closed":
         print("The pull request is closed. Turning down the demo server...")
-        publish_message_to_pubsub(publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info)
+        publish_message_to_pubsub(
+            publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info
+        )
         return "Turning down the demo server..."
 
     elif action == "unlabeled" and changed_label["name"] == demo_label:
         print(
-            "Removing the label {} from the pull request. Turning down the demo server...".format(demo_label)
+            "Removing the label {} from the pull request. Turning down the demo server...".format(
+                demo_label
+            )
         )
-        publish_message_to_pubsub(publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info)
+        publish_message_to_pubsub(
+            publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info
+        )
         return "Turning down the demo server..."
 
     # Deploy #1
     elif action in ["reopened", "synchronize"]:
         print("The pull request is {}. Setting up the demo server...".format(action))
-        publish_message_to_pubsub(publisher, TOPIC_SET_UP_SERVER, MSG_SET_UP_SERVER, info)
+        publish_message_to_pubsub(
+            publisher, TOPIC_SET_UP_SERVER, MSG_SET_UP_SERVER, info
+        )
         return "Setting up the demo server..."
 
     elif action == "labeled" and changed_label["name"] == demo_label:
-        print("Labeling the pull request with {}. Setting up the demo server...".format(demo_label))
-        publish_message_to_pubsub(publisher, TOPIC_SET_UP_SERVER, MSG_SET_UP_SERVER, info)
+        print(
+            "Labeling the pull request with {}. Setting up the demo server...".format(
+                demo_label
+            )
+        )
+        publish_message_to_pubsub(
+            publisher, TOPIC_SET_UP_SERVER, MSG_SET_UP_SERVER, info
+        )
         return "Setting up the demo server..."
 
     else:
