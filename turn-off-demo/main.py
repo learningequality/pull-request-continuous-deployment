@@ -5,13 +5,13 @@ from googleapiclient import discovery
 
 
 # Constants
-MSG_TURN_DOWN_SERVER = "Turn down"
+MSG_TURN_OFF_SERVER = "Turn off"
 
 
-def turn_down_pull_request_demo(event, context):
+def turn_off_demo(event, context):
     pubsub_message = base64.b64decode(event["data"]).decode("utf-8")
-    if pubsub_message != MSG_TURN_DOWN_SERVER:
-        return "Not turning down the demo server."
+    if pubsub_message != MSG_TURN_OFF_SERVER:
+        return "Not turning off the demo server."
 
     project = os.environ["GCP_PROJECT"]  # Google Cloud Project ID
     user = event["attributes"]["user"]  # User who creates the PR

@@ -6,17 +6,21 @@ from google.cloud import pubsub_v1
 from google.cloud import storage
 
 # Constants
-TOPIC_TURN_DOWN_SERVER = "projects/{project_id}/topics/{topic}".format(
-    project_id=os.environ["GCP_PROJECT"], topic="turn-down-demo-server"
+TOPIC_TURN_OFF_SERVER = "projects/{project_id}/topics/{topic}".format(
+    project_id=os.environ["GCP_PROJECT"], topic="turn-off-demo-server"
 )
 TOPIC_SET_UP_SERVER = "projects/{project_id}/topics/{topic}".format(
     project_id=os.environ["GCP_PROJECT"], topic="set-up-demo-server"
 )
-MSG_TURN_DOWN_SERVER = b"Turn down"
+MSG_TURN_OFF_SERVER = b"Turn off"
 MSG_SET_UP_SERVER = b"Set up"
 
 
 def publish_message_to_pubsub(publisher, topic, message, info):
+    """Publish a 'set up' message to the topic 'set-up-demo-server'
+    or a 'turn off' message to the topic 'turn-off-demo-server'
+    in Cloud Pub/Sub to trigger the corresponding cloud functions.
+    """
     publisher.publish(
         topic,
         message,
@@ -27,7 +31,8 @@ def publish_message_to_pubsub(publisher, topic, message, info):
     )
 
 
-def get_collaborators():
+def _get_collaborators():
+    """Get all the collaborators in this GitHub repository."""
     github_access_token = (
         storage.Client()
         .get_bucket(os.environ["STORAGE_BUCKET"])
@@ -59,7 +64,7 @@ def check_pull_request_status(request):
         print("Operations on a closed pull request. Do not trigger any functions.")
         return "Do not trigger any functions."
 
-    collaborators = get_collaborators()
+    collaborators = _get_collaborators()
     if request.json["sender"]["login"] not in collaborators:
         return "The user is not authorized to trigger the function."
 
@@ -83,26 +88,24 @@ def check_pull_request_status(request):
     info = request.json["pull_request"]["head"]
     publisher = pubsub_v1.PublisherClient()
 
-    # Turn down #1
     if action == "closed":
-        print("The pull request is closed. Turning down the demo server...")
+        print("The pull request is closed. Turning off the demo server...")
         publish_message_to_pubsub(
-            publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info
+            publisher, TOPIC_TURN_OFF_SERVER, MSG_TURN_OFF_SERVER, info
         )
-        return "Turning down the demo server..."
+        return "Turning off the demo server..."
 
     elif action == "unlabeled" and changed_label["name"] == demo_label:
         print(
-            "Removing the label {} from the pull request. Turning down the demo server...".format(
+            "Removing the label {} from the pull request. Turning off the demo server...".format(
                 demo_label
             )
         )
         publish_message_to_pubsub(
-            publisher, TOPIC_TURN_DOWN_SERVER, MSG_TURN_DOWN_SERVER, info
+            publisher, TOPIC_TURN_OFF_SERVER, MSG_TURN_OFF_SERVER, info
         )
-        return "Turning down the demo server..."
+        return "Turning off the demo server..."
 
-    # Deploy #1
     elif action in ["reopened", "synchronize"]:
         print("The pull request is {}. Setting up the demo server...".format(action))
         publish_message_to_pubsub(
@@ -123,6 +126,6 @@ def check_pull_request_status(request):
 
     else:
         print(
-            "No need to set up or turn down demo server. Do not trigger any functions."
+            "No need to set up or turn off demo server. Do not trigger any functions."
         )
         return "Do not trigger any functions."

@@ -65,7 +65,7 @@ def upload_tarball_to_storage(user, repo, branch, bucket_name, destination_blob_
     print("File uploaded to {}/{}.".format(bucket_name, destination_blob_name))
 
 
-def build_studio_pull_request_image(event, context):
+def set_up_demo(event, context):
     """
     Run the build on Cloud Build every time a pull request is created
     or a new commit is pushed to the pull request.

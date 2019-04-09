@@ -1,2 +1,2 @@
-PyGithub
-google-cloud-storage
+PyGithub==1.43.6
+google-cloud-storage==1.14.0

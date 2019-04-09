@@ -1,4 +1,4 @@
-requests
-pyyaml
-google-api-python-client
-google-cloud-storage
+requests==2.21.0
+pyyaml==5.1
+google-api-python-client==1.7.8
+google-cloud-storage==1.14.0

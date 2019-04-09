@@ -5,7 +5,7 @@ from github import Github
 from google.cloud import storage
 
 
-def cloud_build_github_check(event, context):
+def create_github_check(event, context):
     build = ast.literal_eval(base64.b64decode(event["data"]).decode("utf-8"))
     try:
         if build["source"]["storageSource"]["bucket"] != "studio-pull-request":
