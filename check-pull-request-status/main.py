@@ -31,8 +31,8 @@ def publish_message_to_pubsub(publisher, topic, message, info):
     )
 
 
-def _get_collaborators():
-    """Get all the collaborators in this GitHub repository."""
+def _get_le_code_reviewers():
+    """Get all the Learning Equality code reviewers in this GitHub repository."""
     github_access_token = (
         storage.Client()
         .get_bucket(os.environ["STORAGE_BUCKET"])
@@ -43,13 +43,17 @@ def _get_collaborators():
     )
 
     g = Github(github_access_token)
-    repo = g.get_repo(os.environ["GITHUB_REPO"])
+    org = g.get_organization(os.environ["GITHUB_ORG"])
+    for team in org.get_teams():
+        if team.name == "Learning Equality code reviewers":
+            team_id = team.id
+            break
 
-    collaborators = []
-    for user in repo.get_collaborators(affiliation="direct"):
-        collaborators.append(user.login)
+    reviewers = []
+    for member in org.get_team(team_id).get_members():
+        reviewers.append(member.login)
 
-    return collaborators
+    return reviewers
 
 
 def check_pull_request_status(request):
@@ -64,8 +68,8 @@ def check_pull_request_status(request):
         print("Operations on a closed pull request. Do not trigger any functions.")
         return "Do not trigger any functions."
 
-    collaborators = _get_collaborators()
-    if request.json["sender"]["login"] not in collaborators:
+    reviewers = _get_le_code_reviewers()
+    if request.json["sender"]["login"] not in reviewers:
         return "The user is not authorized to trigger the function."
 
     demo_label = os.environ["LABEL_NAME"]
