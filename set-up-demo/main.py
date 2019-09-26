@@ -41,9 +41,9 @@ def upload_tarball_to_storage(user, repo, branch, bucket_name, destination_blob_
             user=user, repo=repo, branch=branch
         )
     )
-    zipname = "/tmp/{user}-{repo}-{branch}.zip".format(
-        user=user, repo=repo, branch=branch
-    )
+    filename = "{user}-{repo}-{branch}".format(
+        user=user, repo=repo, branch=branch).replace("/", "-")
+    zipname = "/tmp/{}.zip".format(filename)
     with open(zipname, "wb") as f:
         f.write(resp.content)
 
@@ -80,15 +80,18 @@ def set_up_demo(event, context):
     user = event["attributes"]["user"]  # User who creates the PR
     repo = event["attributes"]["repo"]  # Github repo that the PR is from
     branch = event["attributes"]["branch"]  # The head branch of the PR
-    commit_sha = event["attributes"]["commit_sha"]  # The latest commit sha of the PR
+    # The latest commit sha of the PR
+    commit_sha = event["attributes"]["commit_sha"]
     bucket_name = "studio-pull-request"  # The GCS bucket to store the github tarball
     destination_blob_name = "{user}-{repo}-{branch}-{commit}.tar.gz".format(
         user=user, repo=repo, branch=branch, commit=commit_sha
-    )  # The name of the github tarball to store in GCS
-    release_name = "-".join([user, branch]).replace("_", "-")
+    ).replace("/", "-")  # The name of the github tarball to store in GCS
+    release_name = "-".join([user, branch]).replace(
+        "_", "-").replace("/", "-").lower()
 
     # Upload the github code as a tarball to the bucket in Google Cloud Storage.
-    upload_tarball_to_storage(user, repo, branch, bucket_name, destination_blob_name)
+    upload_tarball_to_storage(
+        user, repo, branch, bucket_name, destination_blob_name)
 
     service = discovery.build("cloudbuild", "v1", cache_discovery=False)
     resp = requests.get(
