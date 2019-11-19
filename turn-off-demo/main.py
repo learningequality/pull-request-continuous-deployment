@@ -16,8 +16,10 @@ def turn_off_demo(event, context):
     project = os.environ["GCP_PROJECT"]  # Google Cloud Project ID
     user = event["attributes"]["user"]  # User who creates the PR
     branch = event["attributes"]["branch"]  # The head branch of the PR
-    commit_sha = event["attributes"]["commit_sha"]  # The latest commit sha of the PR
-    release_name = "-".join([user, branch]).replace("_", "-")
+    # The latest commit sha of the PR
+    commit_sha = event["attributes"]["commit_sha"]
+    release_name = "-".join([user, branch]).replace(
+        "_", "-").replace("/", "-").lower()[:25]
 
     service = discovery.build("cloudbuild", "v1", cache_discovery=False)
     with open("cloudbuild.yaml", "r") as stream:

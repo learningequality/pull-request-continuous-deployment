@@ -87,7 +87,7 @@ def set_up_demo(event, context):
         user=user, repo=repo, branch=branch, commit=commit_sha
     ).replace("/", "-")  # The name of the github tarball to store in GCS
     release_name = "-".join([user, branch]).replace(
-        "_", "-").replace("/", "-").lower()
+        "_", "-").replace("/", "-").lower()[:25]  # Get at most 35 characters for the limitation of deployment name
 
     # Upload the github code as a tarball to the bucket in Google Cloud Storage.
     upload_tarball_to_storage(
