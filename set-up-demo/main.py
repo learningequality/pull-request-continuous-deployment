@@ -4,8 +4,10 @@ import yaml
 import requests
 import zipfile
 import tarfile
+import json
 from googleapiclient import discovery
 from google.cloud import storage
+from google.cloud import secretmanager_v1
 
 
 # Constants
@@ -42,7 +44,8 @@ def upload_tarball_to_storage(user, repo, branch, bucket_name, destination_blob_
         )
     )
     filename = "{user}-{repo}-{branch}".format(
-        user=user, repo=repo, branch=branch).replace("/", "-")
+        user=user, repo=repo, branch=branch
+    ).replace("/", "-")
     zipname = "/tmp/{}.zip".format(filename)
     with open(zipname, "wb") as f:
         f.write(resp.content)
@@ -85,13 +88,15 @@ def set_up_demo(event, context):
     bucket_name = "studio-pull-request"  # The GCS bucket to store the github tarball
     destination_blob_name = "{user}-{repo}-{branch}-{commit}.tar.gz".format(
         user=user, repo=repo, branch=branch, commit=commit_sha
-    ).replace("/", "-")  # The name of the github tarball to store in GCS
-    release_name = "-".join([user, branch]).replace(
-        "_", "-").replace("/", "-").lower()[:25]  # Get at most 35 characters for the limitation of deployment name
+    ).replace(
+        "/", "-"
+    )  # The name of the github tarball to store in GCS
+    release_name = (
+        "-".join([user, branch]).replace("_", "-").replace("/", "-").lower()[:25]
+    )  # Get at most 35 characters for the limitation of deployment name
 
     # Upload the github code as a tarball to the bucket in Google Cloud Storage.
-    upload_tarball_to_storage(
-        user, repo, branch, bucket_name, destination_blob_name)
+    upload_tarball_to_storage(user, repo, branch, bucket_name, destination_blob_name)
 
     service = discovery.build("cloudbuild", "v1", cache_discovery=False)
     resp = requests.get(
@@ -100,6 +105,19 @@ def set_up_demo(event, context):
         )
     )
     cloudbuild_yaml = yaml.load(resp.text, Loader=yaml.SafeLoader)
+
+    # Get PostgreSQL username and password from Google Secret Manager
+    secret_manager_client = secretmanager_v1.SecretManagerServiceClient()
+    secret_name = secret_manager_client.secret_version_path(
+        os.environ["GCP_PROJECT"], "studio-qa-postgres-credentials", "latest"
+    )
+    postgres_credentials = json.loads(
+        secret_manager_client.access_secret_version(secret_name).payload.data.decode(
+            "UTF-8"
+        )
+    )
+    postgres_username = postgres_credentials["username"]
+    postgres_password = postgres_credentials["password"]
 
     # Configure the build
     build_body = {
@@ -111,8 +129,8 @@ def set_up_demo(event, context):
             "_RELEASE_NAME": release_name,
             "_STORAGE_BUCKET": os.environ["STORAGE_BUCKET"],
             "_DATABASE_INSTANCE_NAME": os.environ["DATABASE_INSTANCE_NAME"],
-            "_POSTGRES_USERNAME": os.environ["POSTGRES_USERNAME"],
-            "_POSTGRES_PASSWORD": os.environ["POSTGRES_PASSWORD"],
+            "_POSTGRES_USERNAME": postgres_username,
+            "_POSTGRES_PASSWORD": postgres_password,
             "_TARBALL_LOCATION": "gs://{}/{}".format(
                 bucket_name, destination_blob_name
             ),
