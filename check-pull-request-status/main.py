@@ -1,9 +1,7 @@
 import os
-import json
-import requests
 from github import Github
 from google.cloud import pubsub_v1
-from google.cloud import storage
+from google.cloud import secretmanager_v1
 
 # Constants
 TOPIC_TURN_OFF_SERVER = "projects/{project_id}/topics/{topic}".format(
@@ -33,14 +31,15 @@ def publish_message_to_pubsub(publisher, topic, message, info):
 
 def _get_le_code_reviewers():
     """Get all the Learning Equality code reviewers in this GitHub repository."""
-    github_access_token = (
-        storage.Client()
-        .get_bucket(os.environ["STORAGE_BUCKET"])
-        .get_blob("github_access_token")
-        .download_as_string()
-        .decode("utf-8")
-        .rstrip()
+    secret_manager_client = secretmanager_v1.SecretManagerServiceClient()
+    secret_name = secret_manager_client.secret_version_path(
+        os.environ["GCP_PROJECT"],
+        os.environ["GITHUB_ACCESS_TOKEN_SECRET_NAME"],
+        "latest",
     )
+    github_access_token = secret_manager_client.access_secret_version(
+        secret_name
+    ).payload.data.decode("UTF-8")
 
     g = Github(github_access_token)
     org = g.get_organization(os.environ["GITHUB_ORG"])
@@ -75,6 +74,12 @@ def check_pull_request_status(request):
     demo_label = os.environ["LABEL_NAME"]
     current_labels = request.json["pull_request"]["labels"]
     changed_label = request.json.get("label")
+
+    # Do not trigger the function if
+    # * there is no label attached to the PR
+    # * or there is/are labels attached to the PR but qa-ready is not one of them
+    # * and we are not removing qa-ready label from the PR (as we would need to
+    #   turn off the server if we are)
     if (
         not current_labels
         or demo_label not in [label["name"] for label in current_labels]
@@ -86,8 +91,8 @@ def check_pull_request_status(request):
         )
         return "Do not trigger any functions."
 
-    # Start from here, the label for demo server must exist, be added or be removed in the pull request.
-    # the latter two come with the label or unlabel action
+    # Starting from here, the label for demo server must be either added or
+    # removed in the pull request.
     action = request.json["action"]
     info = request.json["pull_request"]["head"]
     publisher = pubsub_v1.PublisherClient()

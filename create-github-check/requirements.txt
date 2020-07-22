@@ -1,2 +1,2 @@
-PyGithub==1.43.6
-google-cloud-storage==1.14.0
+PyGithub==1.51
+google-cloud-secret-manager==1.0.0

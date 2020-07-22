@@ -2,7 +2,7 @@ import os
 import ast
 import base64
 from github import Github
-from google.cloud import storage
+from google.cloud import secretmanager_v1
 
 
 def create_github_check(event, context):
@@ -13,14 +13,15 @@ def create_github_check(event, context):
     except KeyError:
         return "This is not for pull request demo server cloud build."
 
-    github_access_token = (
-        storage.Client()
-        .get_bucket(os.environ["STORAGE_BUCKET"])
-        .get_blob("github_access_token")
-        .download_as_string()
-        .decode("utf-8")
-        .rstrip()
+    secret_manager_client = secretmanager_v1.SecretManagerServiceClient()
+    secret_name = secret_manager_client.secret_version_path(
+        os.environ["GCP_PROJECT"],
+        os.environ["GITHUB_ACCESS_TOKEN_SECRET_NAME"],
+        "latest",
     )
+    github_access_token = secret_manager_client.access_secret_version(
+        secret_name
+    ).payload.data.decode("UTF-8")
 
     g = Github(github_access_token)
     repo = g.get_repo(os.environ["GITHUB_REPO"])
