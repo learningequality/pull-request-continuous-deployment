@@ -1,0 +1,40 @@
+steps:
+- name: 'gcr.io/$PROJECT_ID/slackbot'
+  entrypoint: 'sh'
+  secretEnv: ['SLACK_WEBHOOK']
+  args: ['-c', '/go/bin/main --build $BUILD_ID --webhook $$SLACK_WEBHOOK']
+
+# This is to handle the issue when a user adds the label to the PR and removes
+# the label right after, so the script errors out here before trying to delete
+# the release on Helm
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: check-app-image-existence
+  args: ['container', 'images', 'describe', 'gcr.io/$PROJECT_ID/learningequality-studio-app:$COMMIT_SHA']
+
+- name: 'gcr.io/$PROJECT_ID/helm'
+  id: helm-delete-studio-instance
+  waitFor: ['check-app-image-existence']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-f'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=dev-qa-cluster'
+  args: ['delete', '--purge', '$_RELEASE_NAME']
+
+# Delete the job as it's handled by Helm hooks and thus not deleted by `helm delete`
+# See https://v2.helm.sh/docs/developing_charts/#hook-resources-are-not-managed-with-corresponding-releases
+- name: 'gcr.io/cloud-builders/kubectl'
+  id: delete-job
+  waitFor: ['helm-delete-studio-instance']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-f'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=dev-qa-cluster'
+  args: ['delete', 'job', '$_RELEASE_NAME-studio-migrate-job', '--wait=true']
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: delete-database
+  waitFor: ['delete-job']
+  args: ['sql', 'databases', 'delete', '$_RELEASE_NAME', '--instance=$_DATABASE_INSTANCE_NAME']
+
+secrets:
+- kmsKeyName: projects/ops-central/locations/global/keyRings/builder-secrets/cryptoKeys/slackwebhook
+  secretEnv:
+    SLACK_WEBHOOK: CiQA5jOsoLBwf5l2KyXQmnLwu2MHkj5xZz/GupkkBbUBpuOoBq4SdwDllQBYbzEJS9X6uNpdD2jSRln5n76Y5HhEUuaJUU9eqePdv9pnorBu9fd+z1zsolLXezMBbM7JwXxq3LuvhSF3no4iJMng2QoFBbSeS+LlHMd2jY2YrloQTN1f3lZ0CRPSDGVnIlo3a1dHExJqcG6b0sy8s4X4
