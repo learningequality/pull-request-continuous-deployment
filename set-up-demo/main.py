@@ -94,6 +94,9 @@ def set_up_demo(event, context):
     release_name = (
         "-".join([user, branch]).replace("_", "-").replace("/", "-").lower()[:25]
     )  # Get at most 35 characters for the limitation of deployment name
+    
+    if release_name.endswith("-"):
+        release_name = release_name[0:-1]
 
     # Upload the github code as a tarball to the bucket in Google Cloud Storage.
     upload_tarball_to_storage(user, repo, branch, bucket_name, destination_blob_name)
